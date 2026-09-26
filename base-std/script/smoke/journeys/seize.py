@@ -1,0 +1,231 @@
+"""B20 seize smoketest — the Cobalt `seizeWithMemo` path.
+
+Exercises the transfer-based seize surface added at Cobalt (V2): the dedicated
+`SEIZE_ROLE`, the `SEIZE_EXEMPT_POLICY` membership gate (an account is seizable when
+it is NOT authorized by that policy), `seizeWithMemo` (`Transfer` -> `Memo` -> `Seized`,
+supply-preserving because seize is a reassignment, not a burn), and the `SEIZE` pause
+vector — plus the gates that must reject (`AccountNotSeizable`, role,
+`InvalidReceiver`, `ContractPaused`), the admin-op decoupling from the *transfer*
+receiver policy on `to`, and the `SEIZE_RECEIVER_POLICY` gate on `to` (mirrors
+`MINT_RECEIVER_POLICY`: unset = allow-any, configured = the destination must be
+authorized). It also verifies that `seizeWithMemo` does not consult the regular
+`TRANSFER_EXECUTOR_POLICY` initiator gate.
+
+Fork-gated: the whole surface is Cobalt-only. The journey probes the
+`SEIZE_EXEMPT_POLICY()` getter and cleanly SKIPS on a pre-Cobalt chain (where the
+seize selectors do not exist) — the same "chain/fork state, not a contract defect"
+stance as the `multiplier` journey and the activation preflight.
+
+Distinct from the `stablecoin` journey's freeze-and-seize, which covers the legacy
+burn-based `burnBlocked` (unchanged at Cobalt: `TRANSFER_SENDER_POLICY` + `BURN` pause).
+"""
+
+from __future__ import annotations
+
+from web3.exceptions import BadFunctionCallOutput, ContractLogicError
+
+from .. import config
+from ..chain import Chain, log, ok, skip, step
+from ..codec import AssetCreateParams, init_call
+
+MEMO = b"seize".ljust(32, b"\x00")
+
+
+def _setup(c: Chain):
+    salt = c.cfg.salt_for("seize")
+    params = AssetCreateParams("Seizable Asset", "SEIZ", c.DEPLOYER, config.ASSET_DECIMALS).encode()
+    roles = [config.MINT_ROLE, config.SEIZE_ROLE, config.PAUSE_ROLE, config.UNPAUSE_ROLE]
+    init_calls = [init_call(c.asset_abi, "grantRole", r, c.DEPLOYER) for r in roles]
+
+    step("setup", "create ASSET token (admin=deployer, MINT+SEIZE+PAUSE+UNPAUSE -> deployer)")
+    tok_addr = c.predict_b20(config.VARIANT_ASSET, salt)
+    c.create_b20(config.VARIANT_ASSET, salt, params, init_calls)
+    tok = c.asset_at(tok_addr)
+    c.assert_eq(c.factory.functions.isB20Initialized(tok_addr).call(), True, "token initialized")
+    return tok
+
+
+def _is_cobalt(c: Chain, tok) -> bool:
+    """Cobalt probe: the `SEIZE_EXEMPT_POLICY()` getter only resolves on the V2 wire surface.
+
+    On a pre-Cobalt (Beryl / V1) chain the selector is unknown and the call reverts, so the seize
+    surface is absent and the journey opts out.
+    """
+    try:
+        scope = tok.functions.SEIZE_EXEMPT_POLICY().call()
+    except (ContractLogicError, BadFunctionCallOutput):
+        return False
+    return scope == config.SEIZE_EXEMPT_POLICY
+
+
+def _journey(c: Chain, tok) -> None:
+    step(1, "getters: SEIZE_EXEMPT_POLICY(), SEIZE_RECEIVER_POLICY() and SEIZE_ROLE() match the keccak constants")
+    c.assert_eq(tok.functions.SEIZE_EXEMPT_POLICY().call(), config.SEIZE_EXEMPT_POLICY, "SEIZE_EXEMPT_POLICY scope")
+    c.assert_eq(
+        tok.functions.SEIZE_RECEIVER_POLICY().call(), config.SEIZE_RECEIVER_POLICY, "SEIZE_RECEIVER_POLICY scope"
+    )
+    c.assert_eq(tok.functions.SEIZE_ROLE().call(), config.SEIZE_ROLE, "SEIZE_ROLE id")
+
+    step(2, "mint(alice, 1000); mint(deployer, 10)")
+    c.send(tok.functions.mint(c.ALICE, config.amt(1000, 18)), c.deployer)
+    c.send(tok.functions.mint(c.DEPLOYER, config.amt(10, 18)), c.deployer)
+    c.assert_eq(tok.functions.balanceOf(c.ALICE).call(), config.amt(1000, 18), "alice balance")
+    c.assert_eq(tok.functions.totalSupply().call(), config.amt(1010, 18), "total supply")
+
+    step(3, "seizable setup: blocklist policy on SEIZE_EXEMPT_POLICY, block alice (alice becomes seizable)")
+    pid = c.create_policy(c.DEPLOYER, config.POLICY_TYPE_BLOCKLIST)
+    c.send(tok.functions.updatePolicy(config.SEIZE_EXEMPT_POLICY, pid), c.deployer)
+    c.send(c.policy.functions.updateBlocklist(pid, True, [c.ALICE]), c.deployer)
+    c.assert_eq(c.policy.functions.isAuthorized(pid, c.ALICE).call(), False, "alice not authorized (seizable)")
+    c.assert_eq(c.policy.functions.isAuthorized(pid, c.BOB).call(), True, "bob authorized (not seizable)")
+
+    step(4, "seizeWithMemo(alice, bob, 400, memo): Transfer -> Memo -> Seized; supply unchanged")
+    receipt = c.send(tok.functions.seizeWithMemo(c.ALICE, c.BOB, config.amt(400, 18), MEMO), c.deployer)
+    c.assert_eq(tok.functions.balanceOf(c.ALICE).call(), config.amt(600, 18), "alice balance after seize")
+    c.assert_eq(tok.functions.balanceOf(c.BOB).call(), config.amt(400, 18), "bob (destination) balance after seize")
+    c.assert_eq(tok.functions.totalSupply().call(), config.amt(1010, 18), "total supply unchanged (seize is a transfer)")
+    c.assert_log_order(
+        receipt,
+        "Transfer(address,address,uint256)",
+        "Memo(address,bytes32)",
+        "Memo immediately follows Transfer",
+    )
+    c.assert_log_order(
+        receipt,
+        "Memo(address,bytes32)",
+        "Seized(address,address,address,uint256)",
+        "Seized follows Memo",
+    )
+    seized = c.event_args(receipt, tok, "Seized")
+    c.assert_eq(seized["caller"], c.DEPLOYER, "Seized.caller == deployer")
+    c.assert_eq(seized["from"], c.ALICE, "Seized.from == alice")
+    c.assert_eq(seized["to"], c.BOB, "Seized.to == bob")
+    c.assert_eq(seized["amount"], config.amt(400, 18), "Seized.amount == 400")
+
+
+def _edges(c: Chain, tok) -> None:
+    step(5, "seize an account that is NOT seizable (bob authorized) -> AccountNotSeizable")
+    c.expect_revert("AccountNotSeizable", tok.functions.seizeWithMemo(c.BOB, c.DEPLOYER, 1, MEMO), c.DEPLOYER)
+
+    step(6, "role gate: user2 (no SEIZE_ROLE) -> AccessControlUnauthorizedAccount")
+    c.expect_revert(
+        "AccessControlUnauthorizedAccount",
+        tok.functions.seizeWithMemo(c.ALICE, c.BOB, 1, MEMO),
+        c.USER2,
+    )
+
+    step(7, "zero destination -> InvalidReceiver (seize is a reassignment, not a burn)")
+    c.expect_revert("InvalidReceiver", tok.functions.seizeWithMemo(c.ALICE, config.ZERO, 1, MEMO), c.DEPLOYER)
+
+    step(8, "zero source -> InvalidSender (seize is a reassignment, not a mint)")
+    c.expect_revert("InvalidSender", tok.functions.seizeWithMemo(config.ZERO, c.BOB, 1, MEMO), c.DEPLOYER)
+
+    step(9, "self-seize (from == to == alice, seizable) -> InvalidReceiver, balance untouched")
+    c.expect_revert("InvalidReceiver", tok.functions.seizeWithMemo(c.ALICE, c.ALICE, 1, MEMO), c.DEPLOYER)
+    c.assert_eq(tok.functions.balanceOf(c.ALICE).call(), config.amt(600, 18), "alice balance unchanged by rejected self-seize")
+
+
+def _decoupling(c: Chain, tok) -> None:
+    step(
+        10,
+        "seize ignores transfer receiver and executor policies: block bob as receiver and every transfer executor",
+    )
+    recv_pid = c.create_policy(c.DEPLOYER, config.POLICY_TYPE_BLOCKLIST)
+    c.send(tok.functions.updatePolicy(config.TRANSFER_RECEIVER_POLICY, recv_pid), c.deployer)
+    c.send(c.policy.functions.updateBlocklist(recv_pid, True, [c.BOB]), c.deployer)
+    c.assert_eq(c.policy.functions.isAuthorized(recv_pid, c.BOB).call(), False, "bob blocked as a receiver")
+    c.send(
+        tok.functions.updatePolicy(config.TRANSFER_EXECUTOR_POLICY, config.ALWAYS_BLOCK_ID),
+        c.deployer,
+    )
+    c.assert_eq(
+        tok.functions.policyId(config.TRANSFER_EXECUTOR_POLICY).call(),
+        config.ALWAYS_BLOCK_ID,
+        "every transfer executor blocked",
+    )
+    # A normal transfer to bob would revert PolicyForbids. Seize is an admin operation: it consults
+    # neither the regular transfer receiver policy nor the regular transfer executor policy.
+    c.expect_revert("PolicyForbids", tok.functions.transfer(c.BOB, 1), c.DEPLOYER)
+    c.send(tok.functions.seizeWithMemo(c.ALICE, c.BOB, config.amt(100, 18), MEMO), c.deployer)
+    c.assert_eq(
+        tok.functions.balanceOf(c.BOB).call(),
+        config.amt(500, 18),
+        "bob received the seize despite transfer policies",
+    )
+    c.assert_eq(tok.functions.balanceOf(c.ALICE).call(), config.amt(500, 18), "alice debited")
+    c.send(
+        tok.functions.updatePolicy(config.TRANSFER_EXECUTOR_POLICY, config.ALWAYS_ALLOW_ID),
+        c.deployer,
+    )
+
+
+def _pause(c: Chain, tok) -> None:
+    step(11, "pause SEIZE: seizeWithMemo reverts ContractPaused; transfers are independent; unpause restores")
+    c.send(tok.functions.pause([config.FEATURE_SEIZE]), c.deployer)
+    c.assert_eq(tok.functions.isPaused(config.FEATURE_SEIZE).call(), True, "SEIZE paused")
+    c.assert_eq(tok.functions.isPaused(config.FEATURE_TRANSFER).call(), False, "TRANSFER not paused (independent vector)")
+    c.expect_revert("ContractPaused", tok.functions.seizeWithMemo(c.ALICE, c.BOB, 1, MEMO), c.DEPLOYER)
+    # Independence: a normal transfer still works while SEIZE is paused (send to alice; bob is receiver-blocked).
+    c.send(tok.functions.transfer(c.ALICE, config.amt(10, 18)), c.deployer)
+    c.assert_eq(tok.functions.balanceOf(c.ALICE).call(), config.amt(510, 18), "transfer works while SEIZE paused")
+
+    c.send(tok.functions.unpause([config.FEATURE_SEIZE]), c.deployer)
+    c.assert_eq(tok.functions.isPaused(config.FEATURE_SEIZE).call(), False, "SEIZE unpaused")
+    c.send(tok.functions.seizeWithMemo(c.ALICE, c.BOB, config.amt(100, 18), MEMO), c.deployer)
+    c.assert_eq(tok.functions.balanceOf(c.BOB).call(), config.amt(600, 18), "seize works again after unpause")
+    c.assert_eq(tok.functions.totalSupply().call(), config.amt(1010, 18), "total supply still unchanged across all seizes")
+
+
+def _receiver_policy(c: Chain, tok) -> None:
+    # SEIZE_RECEIVER_POLICY gates `to`, mirroring MINT_RECEIVER_POLICY: unset = allow-any,
+    # configured = the destination must be authorized. Balances entering here: alice=410, bob=600.
+    step(12, "SEIZE_RECEIVER_POLICY unset (default): seize to any destination is allowed")
+    c.assert_eq(tok.functions.SEIZE_RECEIVER_POLICY().call(), config.SEIZE_RECEIVER_POLICY, "receiver scope getter")
+    # Deployer is not on any allowlist; with the scope unset (ALWAYS_ALLOW) the seize still lands.
+    c.send(tok.functions.seizeWithMemo(c.ALICE, c.DEPLOYER, config.amt(10, 18), MEMO), c.deployer)
+    c.assert_eq(tok.functions.balanceOf(c.DEPLOYER).call(), config.amt(10, 18), "deployer received seize (unset receiver policy)")
+
+    step(13, "configure SEIZE_RECEIVER_POLICY allowlist(bob): seize to bob (authorized) succeeds")
+    recv_pid = c.create_policy(c.DEPLOYER, config.POLICY_TYPE_ALLOWLIST)
+    c.send(tok.functions.updatePolicy(config.SEIZE_RECEIVER_POLICY, recv_pid), c.deployer)
+    c.send(c.policy.functions.updateAllowlist(recv_pid, True, [c.BOB]), c.deployer)
+    c.assert_eq(c.policy.functions.isAuthorized(recv_pid, c.BOB).call(), True, "bob authorized as seize receiver")
+    c.assert_eq(c.policy.functions.isAuthorized(recv_pid, c.DEPLOYER).call(), False, "deployer not an authorized receiver")
+    c.send(tok.functions.seizeWithMemo(c.ALICE, c.BOB, config.amt(100, 18), MEMO), c.deployer)
+    c.assert_eq(tok.functions.balanceOf(c.BOB).call(), config.amt(700, 18), "bob received seize (authorized receiver)")
+
+    step(14, "receiver policy forbids an unauthorized destination -> PolicyForbids(SEIZE_RECEIVER_POLICY)")
+    c.expect_revert("PolicyForbids", tok.functions.seizeWithMemo(c.ALICE, c.DEPLOYER, 1, MEMO), c.DEPLOYER)
+
+
+def _events(c: Chain) -> None:
+    step(15, "expected events emitted across the flow")
+    c.assert_events_emitted(
+        "seize events",
+        "B20Created(address,uint8,string,string,uint8,bytes)",
+        "RoleGranted(bytes32,address,address)",
+        "Transfer(address,address,uint256)",
+        "Memo(address,bytes32)",
+        "Seized(address,address,address,uint256)",
+        "PolicyCreated(uint64,address,uint8)",
+        "BlocklistUpdated(uint64,address,bool,address[])",
+        "AllowlistUpdated(uint64,address,bool,address[])",
+        "PolicyUpdated(bytes32,uint64,uint64)",
+        "Paused(address,uint8[])",
+        "Unpaused(address,uint8[])",
+    )
+
+
+def run(c: Chain) -> None:
+    log("seize: starting")
+    tok = _setup(c)
+    if not _is_cobalt(c, tok):
+        skip("Asset does not expose SEIZE_EXEMPT_POLICY() — chain is pre-Cobalt (no seize surface)")
+    ok("chain is Cobalt-capable (seize surface present)")
+    _journey(c, tok)
+    _edges(c, tok)
+    _decoupling(c, tok)
+    _pause(c, tok)
+    _receiver_policy(c, tok)
+    _events(c)
+    log("seize: OK")

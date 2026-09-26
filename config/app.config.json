@@ -1,0 +1,9 @@
+{
+  "name": "o1.exchange Launchpad of Launchpads MVP",
+  "defaultHost": "127.0.0.1",
+  "defaultPort": 3000,
+  "defaultPublicBaseDomain": "jkswebtest.xyz",
+  "defaultDataFile": "data/launchpad-db.json",
+  "defaultDemoOwnerWallet": "0x1111111111111111111111111111111111111111",
+  "defaultDemoCreatorWallet": "0x2222222222222222222222222222222222222222"
+}
