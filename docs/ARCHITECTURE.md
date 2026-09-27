@@ -8,7 +8,7 @@ This MVP follows the PRD’s core user journey:
 Connect wallet
   -> Create Launchpad
   -> Deploy a dedicated LaunchpadInstance contract
-  -> Choose name / branding / configuration
+  -> Choose name / slug / configuration
   -> Receive unique slug or subdomain
   -> Launchpad goes live
   -> Users can launch B20 tokens
@@ -21,7 +21,7 @@ The implementation is intentionally scoped like an 8-hour hackathon project: it 
 
 Implemented:
 
-- Create a custom launchpad with name, slug, owner wallet, theme, description, and fee config.
+- Create a custom launchpad with name, slug, owner wallet, description, and fee config.
 - Connect a wallet before create/launch actions.
 - Generate and display a dedicated launchpad contract address for each custom launchpad.
 - View launchpads as tenant-like experiences such as `ai.launch.o1.exchange`.
@@ -230,8 +230,7 @@ Stored launchpad metadata:
 - Slug/subdomain mapping
 - Owner wallet
 - Description
-- Theme colors
-- Logo/banner placeholders
+- Default display metadata
 - Additional fee basis points
 - Off-chain status
 - Corresponding on-chain launchpad ID
@@ -258,7 +257,7 @@ The frontend is a dependency-light static app served by the API. It demonstrates
 - View existing launchpads.
 - Create a new launchpad.
 - See the dedicated launchpad contract address.
-- Preview its custom branded page.
+- Preview its custom launchpad page.
 - Launch a B20-style token under it.
 - See the token appear under the selected launchpad.
 
@@ -273,9 +272,8 @@ In production, this should become a Next.js app with:
 
 Deployment configuration:
 
-- `PUBLIC_APP_URL` controls the public app URL, for example `https://jkswebtest.xyz`.
-- `PUBLIC_BASE_DOMAIN` controls launchpad URL display, for example `jkswebtest.xyz` renders `ai.jkswebtest.xyz`.
-- Use `PUBLIC_BASE_DOMAIN=launch.jkswebtest.xyz` if the team prefers PRD-style URLs such as `ai.launch.jkswebtest.xyz`.
+- `PUBLIC_APP_URL` controls the public app URL, for example `https://launch.jkswebtest.xyz`.
+- `PUBLIC_BASE_DOMAIN` controls launchpad URL display, for example `launch.jkswebtest.xyz` renders `ai.launch.jkswebtest.xyz`.
 
 ## Data And Indexing
 

@@ -36,7 +36,7 @@ For local review, keep:
 
 ```text
 PUBLIC_APP_URL=http://127.0.0.1:3000
-PUBLIC_BASE_DOMAIN=jkswebtest.xyz
+PUBLIC_BASE_DOMAIN=launch.jkswebtest.xyz
 ```
 
 Then run:
@@ -63,7 +63,7 @@ Main `.env` variables:
 HOST=127.0.0.1
 PORT=3000
 PUBLIC_APP_URL=http://127.0.0.1:3000
-PUBLIC_BASE_DOMAIN=jkswebtest.xyz
+PUBLIC_BASE_DOMAIN=launch.jkswebtest.xyz
 DATA_FILE=data/launchpad-db.json
 DEMO_OWNER_WALLET=0x1111111111111111111111111111111111111111
 DEMO_CREATOR_WALLET=0x2222222222222222222222222222222222222222
@@ -73,26 +73,18 @@ For deployment on your server/domain, use:
 
 ```text
 HOST=127.0.0.1
-PORT=3000
-PUBLIC_APP_URL=https://jkswebtest.xyz
-PUBLIC_BASE_DOMAIN=jkswebtest.xyz
+PORT=4002
+PUBLIC_APP_URL=https://launch.jkswebtest.xyz
+PUBLIC_BASE_DOMAIN=launch.jkswebtest.xyz
 ```
 
 The frontend will render launchpad examples such as:
 
 ```text
-ai.jkswebtest.xyz
-meme.jkswebtest.xyz
-rwa.jkswebtest.xyz
+ai.launch.jkswebtest.xyz
+meme.launch.jkswebtest.xyz
+rwa.launch.jkswebtest.xyz
 ```
-
-This is closer to the PRD's custom launchpad subdomain model. If you later want `ai.launch.jkswebtest.xyz`, set:
-
-```text
-PUBLIC_BASE_DOMAIN=launch.jkswebtest.xyz
-```
-
-and configure wildcard DNS for `*.launch.jkswebtest.xyz`.
 
 ## Run Checks
 

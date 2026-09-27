@@ -252,10 +252,23 @@ button {
   background: #fff;
 }
 
+.selected-card {
+  border-color: #155eef;
+  box-shadow: 0 0 0 2px rgba(21, 94, 239, 0.08);
+}
+
 .token-card header {
   display: flex;
   justify-content: space-between;
   gap: 12px;
+}
+
+.token-card .select-launchpad {
+  justify-self: start;
+}
+
+.cta-row {
+  margin-top: 12px;
 }
 
 .mono {

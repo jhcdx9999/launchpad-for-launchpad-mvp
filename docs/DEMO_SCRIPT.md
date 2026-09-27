@@ -19,7 +19,7 @@ http://127.0.0.1:3000
 If deploying to your server, use:
 
 ```text
-https://jkswebtest.xyz
+https://launch.jkswebtest.xyz
 ```
 
 ## 0:00 - 0:30 Opening
@@ -60,8 +60,8 @@ Action:
 Say:
 
 ```text
-Here I create a custom launchpad. Each launchpad has its own slug, branding, owner wallet, fee configuration, and a dedicated launchpad contract address.
-The displayed URL uses the configured deployment domain. For this demo it can be shown as rwa.jkswebtest.xyz.
+Here I create a custom launchpad. Each launchpad has its own slug, owner wallet, fee configuration, and a dedicated launchpad contract address.
+The displayed URL uses the configured deployment domain. For this demo it can be shown as rwa.launch.jkswebtest.xyz.
 ```
 
 ## 1:45 - 2:20 Show Launchpad Contract
@@ -83,8 +83,8 @@ The local API simulates the instance address, while the Solidity layer includes 
 Action:
 
 1. Open the custom launchpad URL created in the previous step, for example:
-   - `http://rwa.launch.jkswebtest.xyz`
-   - or `https://rwa.launch.jkswebtest.xyz` if wildcard HTTPS is configured.
+   - `https://rwa.launch.jkswebtest.xyz` if wildcard HTTPS is configured.
+   - or `http://rwa.launch.jkswebtest.xyz` for a local/non-SSL wildcard test.
 2. Fill the token form inside that custom launchpad page:
    - Token name: `RWA Index`
    - Symbol: `RWAI`

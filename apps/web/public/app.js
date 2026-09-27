@@ -10,8 +10,6 @@ const state = {
     name: "RWA Desk",
     slug: "rwa",
     description: "A curated launchpad for tokenized real-world assets.",
-    primary: "#155EEF",
-    accent: "#16A34A",
     additionalFeeBps: "50"
   },
   launchTokenDraft: {
@@ -126,8 +124,6 @@ async function createLaunchpad(event) {
     name: String(form.get("name") || ""),
     slug: String(form.get("slug") || ""),
     description: String(form.get("description") || ""),
-    primary: String(form.get("primary") || ""),
-    accent: String(form.get("accent") || ""),
     additionalFeeBps: String(form.get("additionalFeeBps") || "")
   };
 
@@ -138,8 +134,6 @@ async function createLaunchpad(event) {
       slug: state.createLaunchpadDraft.slug,
       description: state.createLaunchpadDraft.description,
       ownerWallet: state.wallet,
-      primary: state.createLaunchpadDraft.primary,
-      accent: state.createLaunchpadDraft.accent,
       additionalFeeBps: Number(state.createLaunchpadDraft.additionalFeeBps || 50)
     };
 
@@ -239,6 +233,27 @@ function tokenCardsHtml(tokens) {
     .join("");
 }
 
+function launchpadCardsHtml(selected) {
+  return state.launchpads
+    .map(
+      (launchpad) => `
+        <article class="token-card ${selected?.id === launchpad.id ? "selected-card" : ""}">
+          <header>
+            <div>
+              <strong>${launchpad.name}</strong>
+              <div class="muted">${launchpadUrl(launchpad.slug)}</div>
+            </div>
+            <span class="pill">${launchpad.additionalFeeBps} bps</span>
+          </header>
+          <p class="muted">${launchpad.description}</p>
+          <div class="mono">Contract: ${launchpad.contractAddress}</div>
+          <button class="secondary-action select-launchpad" data-slug="${launchpad.slug}">View Details</button>
+        </article>
+      `
+    )
+    .join("");
+}
+
 function render() {
   const tenantView = isTenantView();
   const selected = activeLaunchpad();
@@ -300,7 +315,7 @@ function render() {
         <section class="flow">
           <div class="flow-step">1. Connect wallet</div>
           <div class="flow-step">2. Create launchpad</div>
-          <div class="flow-step">3. Configure branding</div>
+          <div class="flow-step">3. Configure launchpad</div>
           <div class="flow-step">4. Launch B20 token</div>
           <div class="flow-step">5. View attribution</div>
         </section>
@@ -324,16 +339,6 @@ function render() {
               <div class="field">
                 <label>Description</label>
                 <textarea name="description">${createDraft.description}</textarea>
-              </div>
-              <div class="inline">
-                <div class="field">
-                  <label>Primary color</label>
-                  <input name="primary" value="${createDraft.primary}" />
-                </div>
-                <div class="field">
-                  <label>Accent color</label>
-                  <input name="accent" value="${createDraft.accent}" />
-                </div>
               </div>
               <div class="field">
                 <label>Additional platform fee (bps)</label>
@@ -362,6 +367,11 @@ function render() {
                   ? `<div class="notice">
                       Dedicated launchpad contract:
                       <span class="mono">${selected.contractAddress}</span>
+                      ${
+                        tenantView
+                          ? ""
+                          : `<div class="cta-row"><button class="primary-action" id="openSelectedLaunchpad">Open Launchpad</button></div>`
+                      }
                     </div>`
                   : ""
               }
@@ -407,6 +417,17 @@ function render() {
         </section>
 
         ${
+          tenantView
+            ? ""
+            : `
+        <section class="panel">
+          <h2>All Custom Launchpads</h2>
+          <div class="token-grid">${launchpadCardsHtml(selected)}</div>
+        </section>
+        `
+        }
+
+        ${
           tenantView && selected
             ? `
         <section class="panel">
@@ -426,6 +447,19 @@ function render() {
       state.message = "";
       await load();
     });
+  });
+  document.querySelectorAll(".select-launchpad").forEach((button) => {
+    button.addEventListener("click", async () => {
+      state.selectedSlug = button.dataset.slug;
+      state.message = "";
+      await load();
+    });
+  });
+  document.querySelector("#openSelectedLaunchpad")?.addEventListener("click", () => {
+    const launchpad = activeLaunchpad();
+    if (launchpad) {
+      window.location.href = `${window.location.protocol}//${launchpadUrl(launchpad.slug)}`;
+    }
   });
   document.querySelector("#connectWallet")?.addEventListener("click", connectWallet);
   document.querySelector("#disconnectWallet")?.addEventListener("click", disconnectWallet);
