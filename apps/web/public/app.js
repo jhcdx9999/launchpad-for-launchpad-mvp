@@ -350,7 +350,7 @@ function render() {
           `
           }
 
-          <div class="panel preview" style="--tenant-primary: ${selected?.theme.primary || "#155EEF"}">
+          <div class="panel preview">
             <div class="preview-hero">
               <h2>${selected?.name || "Launchpad Preview"}</h2>
               <p>${selected?.description || "Create a launchpad to preview it here."}</p>

@@ -200,9 +200,7 @@ button {
   padding: 24px;
   color: white;
   min-height: 156px;
-  background:
-    linear-gradient(135deg, var(--tenant-primary), rgba(0, 0, 0, 0.3)),
-    #155eef;
+  background: #155eef;
 }
 
 .preview-hero h2 {

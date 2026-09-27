@@ -169,8 +169,6 @@ export class JsonStore {
       slug: "ai",
       ownerWallet: owner,
       description: "A launchpad for AI agent and compute-themed B20 assets.",
-      primary: "#155EEF",
-      accent: "#16A34A",
       additionalFeeBps: 50
     });
     const meme = this.createLaunchpad({
@@ -178,8 +176,6 @@ export class JsonStore {
       slug: "meme",
       ownerWallet: owner,
       description: "A fast experimental launchpad for community-driven B20 launches.",
-      primary: "#DC2626",
-      accent: "#F59E0B",
       additionalFeeBps: 50
     });
 
