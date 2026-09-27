@@ -2,6 +2,7 @@ node_modules/
 data/launchpad-db.json
 contracts/out/
 cache/
+docs/
 .DS_Store
 .env
 .env.local
