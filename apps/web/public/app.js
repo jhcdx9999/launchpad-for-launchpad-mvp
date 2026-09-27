@@ -1,11 +1,12 @@
 const appConfig = window.__O1_LAUNCHPAD_CONFIG__ || {};
+const walletStorageKey = "demoWallet";
 
 const state = {
   launchpads: [],
   tokens: [],
   selectedSlug: null,
   message: "",
-  wallet: localStorage.getItem("demoWallet") || "",
+  wallet: readStoredWallet(),
   createLaunchpadDraft: {
     name: "RWA Desk",
     slug: "rwa",
@@ -22,6 +23,57 @@ const state = {
 };
 
 const demoWallet = appConfig.demoWallet || "";
+
+function sharedWalletCookieDomain() {
+  const baseDomain = String(appConfig.baseDomain || "").toLowerCase();
+  const host = window.location.hostname.toLowerCase();
+  if (!baseDomain || host === "localhost" || host === "127.0.0.1") return "";
+  if (host === baseDomain || host.endsWith(`.${baseDomain}`)) return baseDomain;
+  return "";
+}
+
+function readCookie(name) {
+  const prefix = `${encodeURIComponent(name)}=`;
+  const match = document.cookie.split("; ").find((cookie) => cookie.startsWith(prefix));
+  return match ? decodeURIComponent(match.slice(prefix.length)) : "";
+}
+
+function writeWalletCookie(wallet, maxAgeSeconds) {
+  const parts = [
+    `${encodeURIComponent(walletStorageKey)}=${encodeURIComponent(wallet)}`,
+    "path=/",
+    `max-age=${maxAgeSeconds}`,
+    "SameSite=Lax"
+  ];
+  const domain = sharedWalletCookieDomain();
+  if (domain) parts.push(`domain=${domain}`);
+  if (window.location.protocol === "https:") parts.push("Secure");
+  document.cookie = parts.join("; ");
+}
+
+function readStoredWallet() {
+  const localWallet = localStorage.getItem(walletStorageKey) || "";
+  const sharedWallet = readCookie(walletStorageKey);
+  if (sharedWalletCookieDomain()) {
+    if (sharedWallet && sharedWallet !== localWallet) localStorage.setItem(walletStorageKey, sharedWallet);
+    if (!sharedWallet && localWallet) localStorage.removeItem(walletStorageKey);
+    return sharedWallet;
+  }
+  const wallet = localWallet || sharedWallet;
+  if (wallet && wallet !== sharedWallet) writeWalletCookie(wallet, 60 * 60 * 24 * 30);
+  if (wallet && wallet !== localWallet) localStorage.setItem(walletStorageKey, wallet);
+  return wallet;
+}
+
+function saveStoredWallet(wallet) {
+  localStorage.setItem(walletStorageKey, wallet);
+  writeWalletCookie(wallet, 60 * 60 * 24 * 30);
+}
+
+function clearStoredWallet() {
+  localStorage.removeItem(walletStorageKey);
+  writeWalletCookie("", 0);
+}
 
 async function api(path, options = {}) {
   const response = await fetch(path, {
@@ -79,19 +131,20 @@ function connectWallet() {
   }
 
   state.wallet = demoWallet;
-  localStorage.setItem("demoWallet", state.wallet);
+  saveStoredWallet(state.wallet);
   state.message = `Wallet connected: ${shortAddress(state.wallet)}. Transactions are simulated locally for the MVP.`;
   render();
 }
 
 function disconnectWallet() {
   state.wallet = "";
-  localStorage.removeItem("demoWallet");
+  clearStoredWallet();
   state.message = "Wallet disconnected.";
   render();
 }
 
 async function load() {
+  state.wallet = readStoredWallet();
   const { launchpads } = await api("/api/launchpads");
   state.launchpads = launchpads;
   if (!state.launchpads.length) {
