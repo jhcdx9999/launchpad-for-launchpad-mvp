@@ -5,7 +5,22 @@ const state = {
   tokens: [],
   selectedSlug: null,
   message: "",
-  wallet: localStorage.getItem("demoWallet") || ""
+  wallet: localStorage.getItem("demoWallet") || "",
+  createLaunchpadDraft: {
+    name: "RWA Desk",
+    slug: "rwa",
+    description: "A curated launchpad for tokenized real-world assets.",
+    primary: "#155EEF",
+    accent: "#16A34A",
+    additionalFeeBps: "50"
+  },
+  launchTokenDraft: {
+    name: "AI Compute Index",
+    symbol: "AICI",
+    decimals: "18",
+    initialSupply: "1000000",
+    contractURI: "ipfs://metadata/ai-compute-index"
+  }
 };
 
 const demoWallet = appConfig.demoWallet || "";
@@ -28,8 +43,28 @@ function launchpadUrl(slug) {
   return `${slug}.${appConfig.baseDomain || window.location.host}`;
 }
 
+function tenantSlugFromHost() {
+  const baseDomain = appConfig.baseDomain;
+  if (!baseDomain) return null;
+
+  const host = window.location.hostname.toLowerCase();
+  const normalizedBase = baseDomain.toLowerCase();
+  if (host === normalizedBase || host === `www.${normalizedBase}`) return null;
+  if (!host.endsWith(`.${normalizedBase}`)) return null;
+
+  const prefix = host.slice(0, -1 * (`.${normalizedBase}`).length);
+  if (!prefix || prefix.includes(".")) return null;
+  return prefix;
+}
+
+function isTenantView() {
+  return Boolean(tenantSlugFromHost());
+}
+
 function activeLaunchpad() {
-  return state.launchpads.find((launchpad) => launchpad.slug === state.selectedSlug) || state.launchpads[0];
+  const selected = state.launchpads.find((launchpad) => launchpad.slug === state.selectedSlug);
+  if (isTenantView()) return selected || null;
+  return selected || state.launchpads[0] || null;
 }
 
 function requireWallet() {
@@ -65,28 +100,47 @@ async function load() {
     await api("/api/demo/reset", { method: "POST", body: "{}" });
     return load();
   }
-  state.selectedSlug ||= state.launchpads[0]?.slug;
+  const tenantSlug = tenantSlugFromHost();
+  if (tenantSlug && !state.launchpads.some((launchpad) => launchpad.slug === tenantSlug)) {
+    state.message = `No launchpad exists for ${tenantSlug}.${appConfig.baseDomain}. Create it from the root app first.`;
+  }
+  if (tenantSlug) {
+    state.selectedSlug = tenantSlug;
+  } else {
+    state.selectedSlug ||= state.launchpads[0]?.slug;
+  }
   const selected = activeLaunchpad();
-  if (selected) {
+  if (selected && tenantSlug) {
     const detail = await api(`/api/launchpads/slug/${selected.slug}`);
     state.tokens = detail.tokens;
+  } else {
+    state.tokens = [];
   }
   render();
 }
 
 async function createLaunchpad(event) {
   event.preventDefault();
+  const form = new FormData(event.currentTarget);
+  state.createLaunchpadDraft = {
+    name: String(form.get("name") || ""),
+    slug: String(form.get("slug") || ""),
+    description: String(form.get("description") || ""),
+    primary: String(form.get("primary") || ""),
+    accent: String(form.get("accent") || ""),
+    additionalFeeBps: String(form.get("additionalFeeBps") || "")
+  };
+
   try {
     requireWallet();
-    const form = new FormData(event.currentTarget);
     const payload = {
-      name: form.get("name"),
-      slug: form.get("slug"),
-      description: form.get("description"),
+      name: state.createLaunchpadDraft.name,
+      slug: state.createLaunchpadDraft.slug,
+      description: state.createLaunchpadDraft.description,
       ownerWallet: state.wallet,
-      primary: form.get("primary"),
-      accent: form.get("accent"),
-      additionalFeeBps: Number(form.get("additionalFeeBps") || 50)
+      primary: state.createLaunchpadDraft.primary,
+      accent: state.createLaunchpadDraft.accent,
+      additionalFeeBps: Number(state.createLaunchpadDraft.additionalFeeBps || 50)
     };
 
     const { launchpad } = await api("/api/launchpads", {
@@ -107,17 +161,25 @@ async function launchToken(event) {
   const launchpad = activeLaunchpad();
   if (!launchpad) return;
 
+  const form = new FormData(event.currentTarget);
+  state.launchTokenDraft = {
+    name: String(form.get("name") || ""),
+    symbol: String(form.get("symbol") || ""),
+    decimals: String(form.get("decimals") || ""),
+    initialSupply: String(form.get("initialSupply") || ""),
+    contractURI: String(form.get("contractURI") || "")
+  };
+
   try {
     requireWallet();
-    const form = new FormData(event.currentTarget);
     const payload = {
       launchpadId: launchpad.id,
-      name: form.get("name"),
-      symbol: String(form.get("symbol") || "").toUpperCase(),
-      decimals: Number(form.get("decimals") || 18),
+      name: state.launchTokenDraft.name,
+      symbol: state.launchTokenDraft.symbol.toUpperCase(),
+      decimals: Number(state.launchTokenDraft.decimals || 18),
       creatorWallet: state.wallet,
-      initialSupply: form.get("initialSupply"),
-      contractURI: form.get("contractURI")
+      initialSupply: state.launchTokenDraft.initialSupply,
+      contractURI: state.launchTokenDraft.contractURI
     };
 
     const { token } = await api("/api/tokens/launch", {
@@ -178,9 +240,12 @@ function tokenCardsHtml(tokens) {
 }
 
 function render() {
+  const tenantView = isTenantView();
   const selected = activeLaunchpad();
-  const tokens = selected ? state.tokens : [];
+  const tokens = tenantView && selected ? state.tokens : [];
   const messageClass = state.message && state.message.toLowerCase().includes("must") ? "notice error" : "notice";
+  const createDraft = state.createLaunchpadDraft;
+  const tokenDraft = state.launchTokenDraft;
 
   document.querySelector("#app").innerHTML = `
     <main class="shell">
@@ -210,8 +275,12 @@ function render() {
       <section class="main">
         <div class="topbar">
           <div>
-            <h1>Create, customize, and operate B20 launchpads</h1>
-            <div class="muted">Wallet → dedicated launchpad contract → ${appConfig.baseDomain || window.location.host} subdomain → B20 token → attribution.</div>
+            <h1>${tenantView && selected ? selected.name : "Create, customize, and operate B20 launchpads"}</h1>
+            <div class="muted">${
+              tenantView
+                ? "Launch B20 tokens from this custom launchpad."
+                : `Wallet → dedicated launchpad contract → ${appConfig.baseDomain || window.location.host} subdomain → B20 token → attribution.`
+            }</div>
           </div>
           ${
             state.wallet
@@ -237,38 +306,44 @@ function render() {
         </section>
 
         <section class="grid">
+          ${
+            tenantView
+              ? ""
+              : `
           <div class="panel">
             <h2>Create Launchpad</h2>
             <form class="form" id="createLaunchpadForm">
               <div class="field">
                 <label>Name</label>
-                <input name="name" value="RWA Desk" required />
+                <input name="name" value="${createDraft.name}" required />
               </div>
               <div class="field">
                 <label>Slug / subdomain</label>
-                <input name="slug" value="rwa" required />
+                <input name="slug" value="${createDraft.slug}" required />
               </div>
               <div class="field">
                 <label>Description</label>
-                <textarea name="description">A curated launchpad for tokenized real-world assets.</textarea>
+                <textarea name="description">${createDraft.description}</textarea>
               </div>
               <div class="inline">
                 <div class="field">
                   <label>Primary color</label>
-                  <input name="primary" value="#155EEF" />
+                  <input name="primary" value="${createDraft.primary}" />
                 </div>
                 <div class="field">
                   <label>Accent color</label>
-                  <input name="accent" value="#16A34A" />
+                  <input name="accent" value="${createDraft.accent}" />
                 </div>
               </div>
               <div class="field">
                 <label>Additional platform fee (bps)</label>
-                <input name="additionalFeeBps" type="number" value="50" min="0" max="1000" />
+                <input name="additionalFeeBps" type="number" value="${createDraft.additionalFeeBps}" min="0" max="1000" />
               </div>
               <button class="primary-action">Create Launchpad</button>
             </form>
           </div>
+          `
+          }
 
           <div class="panel preview" style="--tenant-primary: ${selected?.theme.primary || "#155EEF"}">
             <div class="preview-hero">
@@ -291,42 +366,56 @@ function render() {
                   : ""
               }
 
+              ${
+                tenantView && selected
+                  ? `
               <form class="form" id="launchTokenForm">
                 <h2>Launch B20 Token Through This Launchpad</h2>
                 <div class="inline">
                   <div class="field">
                     <label>Token name</label>
-                    <input name="name" value="AI Compute Index" required />
+                    <input name="name" value="${tokenDraft.name}" required />
                   </div>
                   <div class="field">
                     <label>Symbol</label>
-                    <input name="symbol" value="AICI" required />
+                    <input name="symbol" value="${tokenDraft.symbol}" required />
                   </div>
                 </div>
                 <div class="inline">
                   <div class="field">
                     <label>Decimals</label>
-                    <input name="decimals" type="number" value="18" min="6" max="18" />
+                    <input name="decimals" type="number" value="${tokenDraft.decimals}" min="6" max="18" />
                   </div>
                   <div class="field">
                     <label>Initial supply</label>
-                    <input name="initialSupply" value="1000000" />
+                    <input name="initialSupply" value="${tokenDraft.initialSupply}" />
                   </div>
                 </div>
                 <div class="field">
                   <label>Contract URI</label>
-                  <input name="contractURI" value="ipfs://metadata/ai-compute-index" />
+                  <input name="contractURI" value="${tokenDraft.contractURI}" />
                 </div>
                 <button class="primary-action">Launch Token</button>
               </form>
+              `
+                  : tenantView
+                    ? `<div class="notice error">This launchpad does not exist yet. Create it from ${appConfig.appUrl || appConfig.baseDomain || "the root app"} first.</div>`
+                    : `<div class="notice">Open a custom launchpad URL, such as ${selected ? launchpadUrl(selected.slug) : `slug.${appConfig.baseDomain || window.location.host}`}, to launch a token under that launchpad.</div>`
+              }
             </div>
           </div>
         </section>
 
+        ${
+          tenantView && selected
+            ? `
         <section class="panel">
-          <h2>Tokens Under ${selected?.name || "Selected Launchpad"}</h2>
+          <h2>Tokens Under ${selected.name}</h2>
           <div class="token-grid">${tokenCardsHtml(tokens)}</div>
         </section>
+        `
+            : ""
+        }
       </section>
     </main>
   `;
@@ -342,6 +431,12 @@ function render() {
   document.querySelector("#disconnectWallet")?.addEventListener("click", disconnectWallet);
   document.querySelector("#createLaunchpadForm")?.addEventListener("submit", createLaunchpad);
   document.querySelector("#launchTokenForm")?.addEventListener("submit", launchToken);
+  document.querySelector("#createLaunchpadForm")?.addEventListener("input", (event) => {
+    state.createLaunchpadDraft[event.target.name] = event.target.value;
+  });
+  document.querySelector("#launchTokenForm")?.addEventListener("input", (event) => {
+    state.launchTokenDraft[event.target.name] = event.target.value;
+  });
   document.querySelector("#resetDemo")?.addEventListener("click", resetDemo);
 }
 

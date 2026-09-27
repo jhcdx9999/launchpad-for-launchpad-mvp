@@ -82,18 +82,21 @@ The local API simulates the instance address, while the Solidity layer includes 
 
 Action:
 
-1. Fill the token form:
+1. Open the custom launchpad URL created in the previous step, for example:
+   - `http://rwa.launch.jkswebtest.xyz`
+   - or `https://rwa.launch.jkswebtest.xyz` if wildcard HTTPS is configured.
+2. Fill the token form inside that custom launchpad page:
    - Token name: `RWA Index`
    - Symbol: `RWAI`
    - Decimals: `18`
    - Initial supply: `1000000`
-2. Click `Launch Token`.
-3. Point to the token card under the selected launchpad.
+3. Click `Launch Token`.
+4. Point to the token card under the selected launchpad.
 
 Say:
 
 ```text
-Now I launch a B20-style token through this launchpad.
+Now I launch a B20-style token from the custom launchpad page itself, rather than from the root launchpad builder.
 The MVP simulates the B20 Factory event locally, but the contract boundary follows Base's official B20 Factory interface: IB20Factory.createB20 with variant, salt, params, and initCalls.
 ```
 
