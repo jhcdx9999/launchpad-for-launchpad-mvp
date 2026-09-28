@@ -47,6 +47,22 @@ button {
   gap: 8px;
 }
 
+.home-link {
+  align-self: flex-start;
+  color: #e5e7eb;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 7px 10px;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.home-link:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
 .brand strong {
   font-size: 20px;
 }

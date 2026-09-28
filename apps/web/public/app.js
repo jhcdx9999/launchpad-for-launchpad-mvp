@@ -4,6 +4,7 @@ const walletStorageKey = "demoWallet";
 const state = {
   launchpads: [],
   tokens: [],
+  tokenCountsByLaunchpadId: {},
   selectedSlug: null,
   message: "",
   wallet: readStoredWallet(),
@@ -93,6 +94,11 @@ function launchpadUrl(slug) {
   return `${slug}.${appConfig.baseDomain || window.location.host}`;
 }
 
+function rootLaunchpadUrl() {
+  if (appConfig.appUrl) return appConfig.appUrl;
+  return `${window.location.protocol}//${appConfig.baseDomain || window.location.host}`;
+}
+
 function tenantSlugFromHost() {
   const baseDomain = appConfig.baseDomain;
   if (!baseDomain) return null;
@@ -115,6 +121,17 @@ function activeLaunchpad() {
   const selected = state.launchpads.find((launchpad) => launchpad.slug === state.selectedSlug);
   if (isTenantView()) return selected || null;
   return selected || state.launchpads[0] || null;
+}
+
+function updateTokenCounts(tokens) {
+  state.tokenCountsByLaunchpadId = tokens.reduce((counts, token) => {
+    counts[token.launchpadId] = (counts[token.launchpadId] || 0) + 1;
+    return counts;
+  }, {});
+}
+
+function tokenCountForLaunchpad(launchpad) {
+  return state.tokenCountsByLaunchpadId[launchpad.id] || 0;
 }
 
 function requireWallet() {
@@ -164,8 +181,11 @@ async function load() {
   if (selected && tenantSlug) {
     const detail = await api(`/api/launchpads/slug/${selected.slug}`);
     state.tokens = detail.tokens;
+    updateTokenCounts(detail.tokens);
   } else {
+    const { tokens } = await api("/api/tokens");
     state.tokens = [];
+    updateTokenCounts(tokens);
   }
   render();
 }
@@ -296,8 +316,12 @@ function launchpadCardsHtml(selected) {
               <strong>${launchpad.name}</strong>
               <div class="muted">${launchpadUrl(launchpad.slug)}</div>
             </div>
-            <span class="pill">${launchpad.additionalFeeBps} bps</span>
+            <span class="pill">${tokenCountForLaunchpad(launchpad)} tokens</span>
           </header>
+          <div class="pill-row">
+            <span class="pill">${launchpad.additionalFeeBps} bps</span>
+            <span class="pill">Live</span>
+          </div>
           <p class="muted">${launchpad.description}</p>
           <div class="mono">Contract: ${launchpad.contractAddress}</div>
           <button class="secondary-action select-launchpad" data-slug="${launchpad.slug}">View Details</button>
@@ -311,6 +335,9 @@ function render() {
   const tenantView = isTenantView();
   const selected = activeLaunchpad();
   const tokens = tenantView && selected ? state.tokens : [];
+  const visibleTokenCount = tenantView
+    ? tokens.length
+    : Object.values(state.tokenCountsByLaunchpadId).reduce((total, count) => total + count, 0);
   const messageClass = state.message && state.message.toLowerCase().includes("must") ? "notice error" : "notice";
   const createDraft = state.createLaunchpadDraft;
   const tokenDraft = state.launchTokenDraft;
@@ -319,13 +346,14 @@ function render() {
     <main class="shell">
       <aside class="sidebar">
         <div class="brand">
+          <a class="home-link" href="${rootLaunchpadUrl()}">Home</a>
           <strong>o1.exchange</strong>
           <span>Launchpad of Launchpads MVP</span>
         </div>
 
         <div class="stats">
           <div class="stat"><b>${state.launchpads.length}</b><span>Launchpads</span></div>
-          <div class="stat"><b>${tokens.length}</b><span>Selected tokens</span></div>
+          <div class="stat"><b>${visibleTokenCount}</b><span>${tenantView ? "Selected tokens" : "Total tokens"}</span></div>
         </div>
 
         <section>
@@ -511,7 +539,7 @@ function render() {
   document.querySelector("#openSelectedLaunchpad")?.addEventListener("click", () => {
     const launchpad = activeLaunchpad();
     if (launchpad) {
-      window.location.href = `${window.location.protocol}//${launchpadUrl(launchpad.slug)}`;
+      window.open(`${window.location.protocol}//${launchpadUrl(launchpad.slug)}`, "_blank", "noopener,noreferrer");
     }
   });
   document.querySelector("#connectWallet")?.addEventListener("click", connectWallet);
