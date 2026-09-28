@@ -603,8 +603,8 @@ function render() {
                     <input name="decimals" type="number" value="${tokenDraft.decimals}" placeholder="18" min="6" max="18" />
                   </div>
                   <div class="field">
-                    <label>Initial supply <span class="label-hint">default 0</span></label>
-                    <input name="initialSupply" value="${tokenDraft.initialSupply}" placeholder="0" />
+                    <label>Initial supply <span class="label-hint">default 100000000</span></label>
+                    <input name="initialSupply" value="${tokenDraft.initialSupply}" placeholder="100000000" />
                   </div>
                 </div>
                 <div class="field">

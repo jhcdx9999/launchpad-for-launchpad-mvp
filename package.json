@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "node --experimental-strip-types apps/api/src/server.ts",
-    "test": "node --test --experimental-strip-types packages/shared/src/domain.test.ts apps/api/src/indexer.test.ts apps/api/src/stats.test.ts",
+    "test": "node --test --experimental-strip-types packages/shared/src/domain.test.ts apps/api/src/indexer.test.ts apps/api/src/stats.test.ts apps/api/src/store.test.ts",
     "contracts:test": "forge test",
     "check": "npm test"
   },

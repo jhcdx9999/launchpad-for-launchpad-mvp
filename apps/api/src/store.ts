@@ -24,6 +24,8 @@ import { indexEvents } from "./indexer.ts";
 import type { AppConfig } from "./config.ts";
 import { buildStats, popularLaunchpads } from "./stats.ts";
 
+const DEFAULT_INITIAL_SUPPLY = "100000000";
+
 export interface DatabaseShape {
   nextOnchainLaunchpadId: number;
   launchpads: Launchpad[];
@@ -148,7 +150,7 @@ export class JsonStore {
 
     this.db.events.push(...simulated.events);
     const indexed = indexEvents(this.db.launchpads, this.db.tokens, simulated.events, {
-      initialSupply: input.initialSupply || "0",
+      initialSupply: input.initialSupply || DEFAULT_INITIAL_SUPPLY,
       contractURI: input.contractURI || `ipfs://metadata/${input.symbol.trim().toLowerCase()}`
     });
     this.db.tokens = indexed.tokens;
