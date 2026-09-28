@@ -4,6 +4,7 @@
   "defaultPort": 3000,
   "defaultPublicBaseDomain": "launch.jkswebtest.xyz",
   "defaultDataFile": "data/launchpad-db.json",
+  "defaultStatsFile": "data/launchpad-stats.json",
   "defaultDemoOwnerWallet": "0x1111111111111111111111111111111111111111",
   "defaultDemoCreatorWallet": "0x2222222222222222222222222222222222222222"
 }

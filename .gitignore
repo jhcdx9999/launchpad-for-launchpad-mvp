@@ -1,5 +1,6 @@
 node_modules/
 data/launchpad-db.json
+data/launchpad-stats.json
 contracts/out/
 cache/
 docs/

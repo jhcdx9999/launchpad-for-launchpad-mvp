@@ -10,6 +10,7 @@ interface FileConfig {
   defaultPort: number;
   defaultPublicBaseDomain: string;
   defaultDataFile: string;
+  defaultStatsFile: string;
   defaultDemoOwnerWallet: HexAddress;
   defaultDemoCreatorWallet: HexAddress;
 }
@@ -21,6 +22,7 @@ export interface AppConfig {
   publicAppUrl: string;
   publicBaseDomain: string;
   dataFile: string;
+  statsFile: string;
   demoOwnerWallet: HexAddress;
   demoCreatorWallet: HexAddress;
 }
@@ -37,6 +39,7 @@ export function getConfig(): AppConfig {
   const publicBaseDomain = process.env.PUBLIC_BASE_DOMAIN || file.defaultPublicBaseDomain;
   const publicAppUrl = process.env.PUBLIC_APP_URL || `http://${host}:${port}`;
   const dataFile = process.env.DATA_FILE || file.defaultDataFile;
+  const statsFile = process.env.STATS_FILE || file.defaultStatsFile;
   const demoOwnerWallet = process.env.DEMO_OWNER_WALLET || file.defaultDemoOwnerWallet;
   const demoCreatorWallet = process.env.DEMO_CREATOR_WALLET || file.defaultDemoCreatorWallet;
 
@@ -50,6 +53,7 @@ export function getConfig(): AppConfig {
     publicAppUrl,
     publicBaseDomain,
     dataFile,
+    statsFile,
     demoOwnerWallet,
     demoCreatorWallet
   };

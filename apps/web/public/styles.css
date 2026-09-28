@@ -107,6 +107,31 @@ button {
   text-align: left;
 }
 
+.launchpad-button-top {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.launchpad-count {
+  background: rgba(21, 94, 239, 0.32);
+  border: 1px solid rgba(191, 219, 254, 0.22);
+  border-radius: 999px;
+  color: #dbeafe;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 7px;
+}
+
+.launchpad-url {
+  color: #94a3b8;
+  display: block;
+  font-size: 12px;
+  margin-top: 4px;
+  word-break: break-all;
+}
+
 .launchpad-button.active {
   background: #155eef;
   border-color: #155eef;
@@ -168,6 +193,14 @@ button {
 .panel h2 {
   font-size: 16px;
   margin: 0 0 14px;
+}
+
+.section-heading h2 {
+  margin-bottom: 4px;
+}
+
+.section-heading p {
+  margin: 0 0 16px;
 }
 
 .form {
@@ -281,6 +314,80 @@ button {
   justify-self: start;
 }
 
+.launchpad-card {
+  gap: 12px;
+}
+
+.market-summary {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.market-summary div {
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.market-summary strong,
+.market-summary span {
+  display: block;
+}
+
+.market-summary strong {
+  font-size: 17px;
+}
+
+.market-summary span {
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.top-token-list {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.top-token-title {
+  background: #f8fafc;
+  border-bottom: 1px solid #e5e7eb;
+  color: #374151;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 9px 10px;
+}
+
+.top-token-row {
+  align-items: center;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, auto);
+  padding: 10px;
+}
+
+.top-token-row + .top-token-row {
+  border-top: 1px solid #f1f5f9;
+}
+
+.top-token-row strong,
+.top-token-row span {
+  display: block;
+}
+
+.top-token-row span,
+.token-metrics {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.token-metrics {
+  text-align: right;
+}
+
 .cta-row {
   margin-top: 12px;
 }
@@ -331,8 +438,14 @@ button {
   }
 
   .grid,
-  .flow {
+  .flow,
+  .market-summary,
+  .top-token-row {
     grid-template-columns: 1fr;
+  }
+
+  .token-metrics {
+    text-align: left;
   }
 
   .topbar {

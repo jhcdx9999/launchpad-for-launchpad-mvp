@@ -58,6 +58,18 @@ async function routeApi(req: IncomingMessage, res: ServerResponse, url: URL): Pr
       return true;
     }
 
+    if (req.method === "GET" && url.pathname === "/api/launchpads/popular") {
+      const requestedLimit = Number(url.searchParams.get("limit") || 5);
+      const limit = Number.isInteger(requestedLimit) ? Math.min(Math.max(requestedLimit, 1), 20) : 5;
+      sendJson(res, 200, { popularLaunchpads: store.listPopularLaunchpads(limit) });
+      return true;
+    }
+
+    if (req.method === "GET" && url.pathname === "/api/stats") {
+      sendJson(res, 200, { stats: store.getMaterializedStats() });
+      return true;
+    }
+
     if (req.method === "POST" && url.pathname === "/api/launchpads") {
       const launchpad = store.createLaunchpad((await readBody(req)) as any);
       sendJson(res, 201, { launchpad });

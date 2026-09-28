@@ -45,6 +45,50 @@ export interface TokenLaunch {
   createdAt: string;
 }
 
+export interface TokenMarketMetrics {
+  marketCap: number;
+  volume24h: number;
+}
+
+export interface PopularToken {
+  id: string;
+  name: string;
+  symbol: string;
+  tokenAddress: HexAddress;
+  marketCap: number;
+  volume24h: number;
+}
+
+export interface LaunchpadStats {
+  launchpadId: string;
+  ownerWallet: HexAddress;
+  tokenCount: number;
+  marketCap: number;
+  volume24h: number;
+  topTokens: PopularToken[];
+  updatedAt: string;
+}
+
+export interface OwnerLaunchpadStats {
+  ownerWallet: HexAddress;
+  launchpadCount: number;
+  tokenCount: number;
+  marketCap: number;
+  volume24h: number;
+  launchpadIds: string[];
+}
+
+export interface PopularLaunchpad {
+  launchpad: Launchpad;
+  stats: LaunchpadStats;
+}
+
+export interface StatsShape {
+  updatedAt: string;
+  launchpads: Record<string, LaunchpadStats>;
+  owners: Record<string, OwnerLaunchpadStats>;
+}
+
 export interface B20CreatedEvent {
   type: "B20Created";
   token: HexAddress;

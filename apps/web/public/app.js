@@ -4,7 +4,7 @@ const walletStorageKey = "demoWallet";
 const state = {
   launchpads: [],
   tokens: [],
-  tokenCountsByLaunchpadId: {},
+  popularLaunchpads: [],
   selectedSlug: null,
   message: "",
   wallet: readStoredWallet(),
@@ -123,15 +123,15 @@ function activeLaunchpad() {
   return selected || state.launchpads[0] || null;
 }
 
-function updateTokenCounts(tokens) {
-  state.tokenCountsByLaunchpadId = tokens.reduce((counts, token) => {
-    counts[token.launchpadId] = (counts[token.launchpadId] || 0) + 1;
-    return counts;
-  }, {});
+function formatTokenCount(count) {
+  return `${count} token${count === 1 ? "" : "s"}`;
 }
 
-function tokenCountForLaunchpad(launchpad) {
-  return state.tokenCountsByLaunchpadId[launchpad.id] || 0;
+function formatCurrency(value) {
+  if (value >= 1_000_000_000) return `$${(value / 1_000_000_000).toFixed(2)}B`;
+  if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(2)}M`;
+  if (value >= 1_000) return `$${(value / 1_000).toFixed(1)}K`;
+  return `$${value}`;
 }
 
 function requireWallet() {
@@ -177,15 +177,14 @@ async function load() {
   } else {
     state.selectedSlug ||= state.launchpads[0]?.slug;
   }
+  const { popularLaunchpads } = await api("/api/launchpads/popular?limit=5");
+  state.popularLaunchpads = popularLaunchpads;
   const selected = activeLaunchpad();
   if (selected && tenantSlug) {
     const detail = await api(`/api/launchpads/slug/${selected.slug}`);
     state.tokens = detail.tokens;
-    updateTokenCounts(detail.tokens);
   } else {
-    const { tokens } = await api("/api/tokens");
     state.tokens = [];
-    updateTokenCounts(tokens);
   }
   render();
 }
@@ -269,12 +268,19 @@ async function resetDemo() {
 }
 
 function launchpadListHtml(selected) {
-  return state.launchpads
+  if (!state.popularLaunchpads.length) {
+    return `<div class="muted">No popular launchpads yet.</div>`;
+  }
+
+  return state.popularLaunchpads
     .map(
-      (launchpad) => `
+      ({ launchpad, stats }) => `
         <button class="launchpad-button ${selected?.id === launchpad.id ? "active" : ""}" data-slug="${launchpad.slug}">
-          <strong>${launchpad.name}</strong><br />
-          <span>${launchpadUrl(launchpad.slug)}</span>
+          <div class="launchpad-button-top">
+            <strong>${launchpad.name}</strong>
+            <span class="launchpad-count">${formatTokenCount(stats.tokenCount)}</span>
+          </div>
+          <span class="launchpad-url">${launchpadUrl(launchpad.slug)}</span>
         </button>
       `
     )
@@ -307,27 +313,66 @@ function tokenCardsHtml(tokens) {
 }
 
 function launchpadCardsHtml(selected) {
-  return state.launchpads
-    .map(
-      (launchpad) => `
-        <article class="token-card ${selected?.id === launchpad.id ? "selected-card" : ""}">
+  if (!state.popularLaunchpads.length) {
+    return `<div class="notice">No launchpads yet. Create the first one and start the market.</div>`;
+  }
+
+  return state.popularLaunchpads
+    .map(({ launchpad, stats }, index) => {
+      return `
+        <article class="token-card launchpad-card ${selected?.id === launchpad.id ? "selected-card" : ""}">
           <header>
             <div>
               <strong>${launchpad.name}</strong>
               <div class="muted">${launchpadUrl(launchpad.slug)}</div>
             </div>
-            <span class="pill">${tokenCountForLaunchpad(launchpad)} tokens</span>
+            <span class="pill">#${index + 1} Popular</span>
           </header>
-          <div class="pill-row">
-            <span class="pill">${launchpad.additionalFeeBps} bps</span>
-            <span class="pill">Live</span>
+          <div class="market-summary">
+            <div>
+              <strong>${formatTokenCount(stats.tokenCount)}</strong>
+              <span>launched</span>
+            </div>
+            <div>
+              <strong>${formatCurrency(stats.marketCap)}</strong>
+              <span>combined market cap</span>
+            </div>
+            <div>
+              <strong>${formatCurrency(stats.volume24h)}</strong>
+              <span>24h volume</span>
+            </div>
           </div>
           <p class="muted">${launchpad.description}</p>
+          ${
+            stats.topTokens.length
+              ? `
+          <div class="top-token-list">
+            <div class="top-token-title">Top market-cap launches</div>
+            ${stats.topTokens
+              .map(
+                (token) => `
+                  <div class="top-token-row">
+                    <div>
+                      <strong>${token.name}</strong>
+                      <span>${token.symbol}</span>
+                    </div>
+                    <div class="token-metrics">
+                      <span>Market cap ${formatCurrency(token.marketCap)}</span>
+                      <span>24h volume ${formatCurrency(token.volume24h)}</span>
+                    </div>
+                  </div>
+                `
+              )
+              .join("")}
+          </div>
+          `
+              : `<div class="notice">No live tokens yet. First movers can own this launchpad's activity chart.</div>`
+          }
           <div class="mono">Contract: ${launchpad.contractAddress}</div>
           <button class="secondary-action select-launchpad" data-slug="${launchpad.slug}">View Details</button>
         </article>
-      `
-    )
+      `;
+    })
     .join("");
 }
 
@@ -337,7 +382,7 @@ function render() {
   const tokens = tenantView && selected ? state.tokens : [];
   const visibleTokenCount = tenantView
     ? tokens.length
-    : Object.values(state.tokenCountsByLaunchpadId).reduce((total, count) => total + count, 0);
+    : state.popularLaunchpads.reduce((total, item) => total + item.stats.tokenCount, 0);
   const messageClass = state.message && state.message.toLowerCase().includes("must") ? "notice error" : "notice";
   const createDraft = state.createLaunchpadDraft;
   const tokenDraft = state.launchTokenDraft;
@@ -357,7 +402,7 @@ function render() {
         </div>
 
         <section>
-          <h2>Custom Launchpads</h2>
+          <h2>Popular Launchpads</h2>
           <div class="launchpad-list">${launchpadListHtml(selected)}</div>
         </section>
 
@@ -502,7 +547,12 @@ function render() {
             ? ""
             : `
         <section class="panel">
-          <h2>All Custom Launchpads</h2>
+          <div class="section-heading">
+            <div>
+              <h2>Popular Custom Launchpads</h2>
+              <p class="muted">Discover active launchpads with the strongest launch activity and market momentum.</p>
+            </div>
+          </div>
           <div class="token-grid">${launchpadCardsHtml(selected)}</div>
         </section>
         `

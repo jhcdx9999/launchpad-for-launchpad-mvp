@@ -14,12 +14,15 @@ import {
   type HexAddress,
   type Launchpad,
   type LaunchpadInput,
+  type PopularLaunchpad,
+  type StatsShape,
   type TokenLaunch,
   type TokenLaunchInput
 } from "../../../packages/shared/src/domain.ts";
 import { simulateB20FactoryLaunch, simulateLaunchpadInstanceAddress } from "../../../packages/shared/src/mock-chain.ts";
 import { indexEvents } from "./indexer.ts";
 import type { AppConfig } from "./config.ts";
+import { buildStats, popularLaunchpads } from "./stats.ts";
 
 export interface DatabaseShape {
   nextOnchainLaunchpadId: number;
@@ -38,12 +41,15 @@ const EMPTY_DB: DatabaseShape = {
 export class JsonStore {
   private db: DatabaseShape;
   private readonly filePath: string;
+  private readonly statsPath: string;
   private readonly config: AppConfig;
 
   constructor(config: AppConfig, filePath = resolve(config.dataFile)) {
     this.config = config;
     this.filePath = filePath;
+    this.statsPath = resolve(config.statsFile);
     this.db = this.load();
+    this.persistStats();
   }
 
   listLaunchpads(): Launchpad[] {
@@ -92,6 +98,7 @@ export class JsonStore {
 
     this.db.launchpads.push(launchpad);
     this.persist();
+    this.persistStats();
     return launchpad;
   }
 
@@ -109,6 +116,7 @@ export class JsonStore {
     launchpad.updatedAt = nowIso();
 
     this.persist();
+    this.persistStats();
     return launchpad;
   }
 
@@ -145,6 +153,7 @@ export class JsonStore {
     });
     this.db.tokens = indexed.tokens;
     this.persist();
+    this.persistStats();
 
     const token = this.db.tokens.find((candidate) => candidate.tokenAddress === simulated.token);
     if (!token) throw new Error("Indexer failed to materialize token launch.");
@@ -157,6 +166,18 @@ export class JsonStore {
       tokens: this.db.tokens.length,
       events: this.db.events.length
     };
+  }
+
+  getMaterializedStats(): StatsShape {
+    if (!existsSync(this.statsPath)) {
+      return this.persistStats();
+    }
+
+    return JSON.parse(readFileSync(this.statsPath, "utf8")) as StatsShape;
+  }
+
+  listPopularLaunchpads(limit = 5): PopularLaunchpad[] {
+    return popularLaunchpads(this.db.launchpads, this.getMaterializedStats(), limit);
   }
 
   resetWithSeeds(): DatabaseShape {
@@ -199,6 +220,7 @@ export class JsonStore {
     });
 
     this.persist();
+    this.persistStats();
     return this.db;
   }
 
@@ -213,5 +235,12 @@ export class JsonStore {
   private persist(): void {
     mkdirSync(dirname(this.filePath), { recursive: true });
     writeFileSync(this.filePath, JSON.stringify(this.db, null, 2));
+  }
+
+  private persistStats(): StatsShape {
+    const stats = buildStats(this.db.launchpads, this.db.tokens);
+    mkdirSync(dirname(this.statsPath), { recursive: true });
+    writeFileSync(this.statsPath, JSON.stringify(stats, null, 2));
+    return stats;
   }
 }
