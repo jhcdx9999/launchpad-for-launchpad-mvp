@@ -36,26 +36,26 @@ test("buildStats materializes owner and launchpad token counts", () => {
     {
       ...launchpadBase,
       id: "lp_ai",
-      name: "AI Launch",
-      slug: "ai",
+      name: "Alpha Launch",
+      slug: "alpha",
       ownerWallet: "0x1111111111111111111111111111111111111111"
     },
     {
       ...launchpadBase,
       id: "lp_meme",
-      name: "Meme Lab",
-      slug: "meme",
+      name: "Beta Launch",
+      slug: "beta",
       ownerWallet: "0x1111111111111111111111111111111111111111"
     }
   ];
   const tokens: TokenLaunch[] = [
-    { ...tokenBase, id: "tok_ai_1", launchpadId: "lp_ai", name: "Agent Index", symbol: "AIDX" },
+    { ...tokenBase, id: "tok_alpha_1", launchpadId: "lp_ai", name: "Alpha Index", symbol: "ALPHA" },
     {
       ...tokenBase,
       id: "tok_ai_2",
       launchpadId: "lp_ai",
-      name: "Compute Basket",
-      symbol: "CPUB",
+      name: "Beta Basket",
+      symbol: "BETA",
       tokenAddress: "0xdddddddddddddddddddddddddddddddddddddddd"
     }
   ];
@@ -74,34 +74,34 @@ test("popularLaunchpads ranks by token count before market cap", () => {
     {
       ...launchpadBase,
       id: "lp_ai",
-      name: "AI Launch",
-      slug: "ai",
+      name: "Alpha Launch",
+      slug: "alpha",
       ownerWallet: "0x1111111111111111111111111111111111111111"
     },
     {
       ...launchpadBase,
       id: "lp_meme",
-      name: "Meme Lab",
-      slug: "meme",
+      name: "Beta Launch",
+      slug: "beta",
       ownerWallet: "0x2222222222222222222222222222222222222222"
     }
   ];
   const tokens: TokenLaunch[] = [
-    { ...tokenBase, id: "tok_ai", launchpadId: "lp_ai", name: "Agent Index", symbol: "AIDX" },
+    { ...tokenBase, id: "tok_alpha", launchpadId: "lp_ai", name: "Alpha Index", symbol: "ALPHA" },
     {
       ...tokenBase,
       id: "tok_meme_1",
       launchpadId: "lp_meme",
-      name: "Meme One",
-      symbol: "MEME1",
+      name: "Beta One",
+      symbol: "BETA1",
       tokenAddress: "0xdddddddddddddddddddddddddddddddddddddddd"
     },
     {
       ...tokenBase,
       id: "tok_meme_2",
       launchpadId: "lp_meme",
-      name: "Meme Two",
-      symbol: "MEME2",
+      name: "Beta Two",
+      symbol: "BETA2",
       tokenAddress: "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
     }
   ];

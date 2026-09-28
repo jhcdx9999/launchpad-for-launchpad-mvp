@@ -49,7 +49,7 @@ async function routeApi(req: IncomingMessage, res: ServerResponse, url: URL): Pr
     }
 
     if (req.method === "POST" && url.pathname === "/api/demo/reset") {
-      sendJson(res, 200, store.resetWithSeeds());
+      sendJson(res, 200, store.resetDemo());
       return true;
     }
 

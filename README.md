@@ -51,7 +51,7 @@ Then open:
 http://127.0.0.1:3000
 ```
 
-The API seeds demo launchpads automatically on first load. You can reset demo data from the UI.
+The app starts with no default launchpads. Create the first custom launchpad from the root page.
 
 ## Configuration
 

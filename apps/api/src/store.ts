@@ -180,45 +180,8 @@ export class JsonStore {
     return popularLaunchpads(this.db.launchpads, this.getMaterializedStats(), limit);
   }
 
-  resetWithSeeds(): DatabaseShape {
+  resetDemo(): DatabaseShape {
     this.db = structuredClone(EMPTY_DB);
-    const owner = this.config.demoOwnerWallet;
-    const creator = this.config.demoCreatorWallet;
-
-    const ai = this.createLaunchpad({
-      name: "AI Launch",
-      slug: "ai",
-      ownerWallet: owner,
-      description: "A launchpad for AI agent and compute-themed B20 assets.",
-      additionalFeeBps: 50
-    });
-    const meme = this.createLaunchpad({
-      name: "Meme Lab",
-      slug: "meme",
-      ownerWallet: owner,
-      description: "A fast experimental launchpad for community-driven B20 launches.",
-      additionalFeeBps: 50
-    });
-
-    this.launchToken({
-      launchpadId: ai.id,
-      name: "Agent Index",
-      symbol: "AIDX",
-      decimals: 18,
-      creatorWallet: creator,
-      initialSupply: "1000000",
-      contractURI: "ipfs://metadata/agent-index"
-    });
-    this.launchToken({
-      launchpadId: meme.id,
-      name: "Based Meme Basket",
-      symbol: "BMB",
-      decimals: 18,
-      creatorWallet: creator,
-      initialSupply: "420690000",
-      contractURI: "ipfs://metadata/based-meme-basket"
-    });
-
     this.persist();
     this.persistStats();
     return this.db;

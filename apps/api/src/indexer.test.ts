@@ -7,12 +7,12 @@ import { indexEvents } from "./indexer.ts";
 test("indexEvents joins B20Created and TokenLaunched by token address", () => {
   const launchpads: Launchpad[] = [
     {
-      id: "lp_ai",
+      id: "lp_alpha",
       onchainLaunchpadId: 1,
       contractAddress: "0x3333333333333333333333333333333333333333",
-      name: "AI Launch",
-      slug: "ai",
-      description: "AI launchpad",
+      name: "Alpha Launch",
+      slug: "alpha",
+      description: "Alpha launchpad",
       ownerWallet: "0x1111111111111111111111111111111111111111",
       logoUrl: "",
       bannerUrl: "",
@@ -29,8 +29,8 @@ test("indexEvents joins B20Created and TokenLaunched by token address", () => {
       type: "B20Created",
       token: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       variant: "ASSET",
-      name: "AI Index",
-      symbol: "AIDX",
+      name: "Alpha Index",
+      symbol: "ALPHA",
       decimals: 18,
       txHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
       blockNumber: 1
@@ -52,6 +52,6 @@ test("indexEvents joins B20Created and TokenLaunched by token address", () => {
   });
 
   assert.equal(result.tokens.length, 1);
-  assert.equal(result.tokens[0].launchpadId, "lp_ai");
-  assert.equal(result.tokens[0].symbol, "AIDX");
+  assert.equal(result.tokens[0].launchpadId, "lp_alpha");
+  assert.equal(result.tokens[0].symbol, "ALPHA");
 });

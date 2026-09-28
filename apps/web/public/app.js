@@ -164,10 +164,6 @@ async function load() {
   state.wallet = readStoredWallet();
   const { launchpads } = await api("/api/launchpads");
   state.launchpads = launchpads;
-  if (!state.launchpads.length) {
-    await api("/api/demo/reset", { method: "POST", body: "{}" });
-    return load();
-  }
   const tenantSlug = tenantSlugFromHost();
   if (tenantSlug && !state.launchpads.some((launchpad) => launchpad.slug === tenantSlug)) {
     state.message = `No launchpad exists for ${tenantSlug}.${appConfig.baseDomain}. Create it from the root app first.`;
@@ -175,7 +171,9 @@ async function load() {
   if (tenantSlug) {
     state.selectedSlug = tenantSlug;
   } else {
-    state.selectedSlug ||= state.launchpads[0]?.slug;
+    state.selectedSlug = state.launchpads.some((launchpad) => launchpad.slug === state.selectedSlug)
+      ? state.selectedSlug
+      : state.launchpads[0]?.slug || null;
   }
   const { popularLaunchpads } = await api("/api/launchpads/popular?limit=5");
   state.popularLaunchpads = popularLaunchpads;
@@ -263,7 +261,7 @@ async function launchToken(event) {
 async function resetDemo() {
   await api("/api/demo/reset", { method: "POST", body: "{}" });
   state.selectedSlug = null;
-  state.message = "Demo data reset.";
+  state.message = "Launchpad data cleared. Create the first custom launchpad to start the market.";
   await load();
 }
 
@@ -406,7 +404,7 @@ function render() {
           <div class="launchpad-list">${launchpadListHtml(selected)}</div>
         </section>
 
-        <button class="secondary-action" id="resetDemo">Reset Demo Data</button>
+        <button class="secondary-action" id="resetDemo">Clear Launchpad Data</button>
         <p class="muted">
           Local MVP uses a mocked B20 Factory event stream, but follows the real
           IB20Factory.createB20 integration boundary.
@@ -536,7 +534,11 @@ function render() {
               `
                   : tenantView
                     ? `<div class="notice error">This launchpad does not exist yet. Create it from ${appConfig.appUrl || appConfig.baseDomain || "the root app"} first.</div>`
-                    : `<div class="notice">Open a custom launchpad URL, such as ${selected ? launchpadUrl(selected.slug) : `slug.${appConfig.baseDomain || window.location.host}`}, to launch a token under that launchpad.</div>`
+                    : `<div class="notice">${
+                        selected
+                          ? `Open ${launchpadUrl(selected.slug)} to launch a token under that launchpad.`
+                          : "Create the first custom launchpad, then open its subdomain to launch tokens under it."
+                      }</div>`
               }
             </div>
           </div>
