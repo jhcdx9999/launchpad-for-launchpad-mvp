@@ -14,17 +14,17 @@ const state = {
   },
   wallet: readStoredWallet(),
   createLaunchpadDraft: {
-    name: "RWA Desk",
-    slug: "rwa",
-    description: "A curated launchpad for tokenized real-world assets.",
-    additionalFeeBps: "50"
+    name: "",
+    slug: "",
+    description: "",
+    additionalFeeBps: ""
   },
   launchTokenDraft: {
-    name: "AI Compute Index",
-    symbol: "AICI",
-    decimals: "18",
-    initialSupply: "1000000",
-    contractURI: "ipfs://metadata/ai-compute-index"
+    name: "",
+    symbol: "",
+    decimals: "",
+    initialSupply: "",
+    contractURI: ""
   }
 };
 
@@ -590,11 +590,11 @@ function render() {
                 <div class="inline">
                   <div class="field">
                     <label>Token name</label>
-                    <input name="name" value="${tokenDraft.name}" required />
+                    <input name="name" value="${tokenDraft.name}" placeholder="token name here" required />
                   </div>
                   <div class="field">
                     <label>Symbol</label>
-                    <input name="symbol" value="${tokenDraft.symbol}" required />
+                    <input name="symbol" value="${tokenDraft.symbol}" placeholder="symbol here" required />
                   </div>
                 </div>
                 <div class="inline">

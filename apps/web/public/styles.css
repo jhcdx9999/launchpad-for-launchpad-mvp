@@ -252,6 +252,11 @@ button {
   resize: vertical;
 }
 
+.field input::placeholder,
+.field textarea::placeholder {
+  color: #cbd5e1;
+}
+
 .inline {
   display: grid;
   grid-template-columns: 1fr 1fr;
