@@ -536,19 +536,19 @@ function render() {
             <form class="form" id="createLaunchpadForm">
               <div class="field">
                 <label>Name</label>
-                <input name="name" value="${createDraft.name}" required />
+                <input name="name" value="${createDraft.name}" placeholder="name here" required />
               </div>
               <div class="field">
                 <label>Slug / subdomain</label>
-                <input name="slug" value="${createDraft.slug}" required />
+                <input name="slug" value="${createDraft.slug}" placeholder="slug here" required />
               </div>
               <div class="field">
                 <label>Description</label>
-                <textarea name="description">${createDraft.description}</textarea>
+                <textarea name="description" placeholder="description here">${createDraft.description}</textarea>
               </div>
               <div class="field">
                 <label>Additional platform fee (bps)</label>
-                <input name="additionalFeeBps" type="number" value="${createDraft.additionalFeeBps}" min="0" max="1000" />
+                <input name="additionalFeeBps" type="number" value="${createDraft.additionalFeeBps}" placeholder="50" min="0" max="1000" />
               </div>
               <button class="primary-action">Create Launchpad</button>
             </form>
@@ -600,16 +600,16 @@ function render() {
                 <div class="inline">
                   <div class="field">
                     <label>Decimals</label>
-                    <input name="decimals" type="number" value="${tokenDraft.decimals}" min="6" max="18" />
+                    <input name="decimals" type="number" value="${tokenDraft.decimals}" placeholder="18" min="6" max="18" />
                   </div>
                   <div class="field">
                     <label>Initial supply</label>
-                    <input name="initialSupply" value="${tokenDraft.initialSupply}" />
+                    <input name="initialSupply" value="${tokenDraft.initialSupply}" placeholder="1000000" />
                   </div>
                 </div>
                 <div class="field">
                   <label>Contract URI</label>
-                  <input name="contractURI" value="${tokenDraft.contractURI}" />
+                  <input name="contractURI" value="${tokenDraft.contractURI}" placeholder="contract URI here" />
                 </div>
                 <button class="primary-action">Launch Token</button>
               </form>
