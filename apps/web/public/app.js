@@ -445,7 +445,7 @@ function launchpadCardsHtml(selected) {
               : `<div class="notice">No live tokens yet. First movers can own this launchpad's activity chart.</div>`
           }
           <div class="mono">Contract: ${launchpad.contractAddress}</div>
-          <button class="primary-action select-launchpad" data-slug="${launchpad.slug}">View Details</button>
+          <button class="primary-action open-launchpad-card" data-slug="${launchpad.slug}">Open Launchpad</button>
         </article>
       `;
     })
@@ -663,11 +663,9 @@ function render() {
       await load();
     });
   });
-  document.querySelectorAll(".select-launchpad").forEach((button) => {
-    button.addEventListener("click", async () => {
-      state.selectedSlug = button.dataset.slug;
-      state.message = "";
-      await load();
+  document.querySelectorAll(".open-launchpad-card").forEach((button) => {
+    button.addEventListener("click", () => {
+      window.open(`${window.location.protocol}//${launchpadUrl(button.dataset.slug)}`, "_blank", "noopener,noreferrer");
     });
   });
   document.querySelector("#openSelectedLaunchpad")?.addEventListener("click", () => {
