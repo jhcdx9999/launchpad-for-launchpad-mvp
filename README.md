@@ -65,6 +65,10 @@ PORT=3000
 PUBLIC_APP_URL=http://127.0.0.1:3000
 PUBLIC_BASE_DOMAIN=launch.jkswebtest.xyz
 DATA_FILE=data/launchpad-db.json
+STATS_FILE=data/launchpad-stats.json
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=change-this-password
+ADMIN_SESSION_SECRET=replace-with-a-long-random-session-secret
 DEMO_OWNER_WALLET=0x1111111111111111111111111111111111111111
 DEMO_CREATOR_WALLET=0x2222222222222222222222222222222222222222
 ```
@@ -76,15 +80,27 @@ HOST=127.0.0.1
 PORT=4002
 PUBLIC_APP_URL=https://launch.jkswebtest.xyz
 PUBLIC_BASE_DOMAIN=launch.jkswebtest.xyz
+STATS_FILE=data/launchpad-stats.json
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=use-a-strong-password
+ADMIN_SESSION_SECRET=use-a-long-random-session-secret
 ```
 
 The frontend will render launchpad examples such as:
 
 ```text
-ai.launch.jkswebtest.xyz
-meme.launch.jkswebtest.xyz
 rwa.launch.jkswebtest.xyz
+games.launch.jkswebtest.xyz
+creator.launch.jkswebtest.xyz
 ```
+
+Admin-only MVP operations are available at:
+
+```text
+https://launch.jkswebtest.xyz/admin
+```
+
+Log in with `ADMIN_USERNAME` and `ADMIN_PASSWORD`. A successful admin login is kept in a 24-hour HttpOnly session cookie, and only authenticated admins can clear local MVP launchpad data from that page.
 
 ## Run Checks
 

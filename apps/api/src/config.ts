@@ -11,6 +11,9 @@ interface FileConfig {
   defaultPublicBaseDomain: string;
   defaultDataFile: string;
   defaultStatsFile: string;
+  defaultAdminUsername: string;
+  defaultAdminPassword: string;
+  defaultAdminSessionSecret: string;
   defaultDemoOwnerWallet: HexAddress;
   defaultDemoCreatorWallet: HexAddress;
 }
@@ -23,6 +26,9 @@ export interface AppConfig {
   publicBaseDomain: string;
   dataFile: string;
   statsFile: string;
+  adminUsername: string;
+  adminPassword: string;
+  adminSessionSecret: string;
   demoOwnerWallet: HexAddress;
   demoCreatorWallet: HexAddress;
 }
@@ -40,9 +46,15 @@ export function getConfig(): AppConfig {
   const publicAppUrl = process.env.PUBLIC_APP_URL || `http://${host}:${port}`;
   const dataFile = process.env.DATA_FILE || file.defaultDataFile;
   const statsFile = process.env.STATS_FILE || file.defaultStatsFile;
+  const adminUsername = process.env.ADMIN_USERNAME || file.defaultAdminUsername;
+  const adminPassword = process.env.ADMIN_PASSWORD || file.defaultAdminPassword;
+  const adminSessionSecret = process.env.ADMIN_SESSION_SECRET || file.defaultAdminSessionSecret;
   const demoOwnerWallet = process.env.DEMO_OWNER_WALLET || file.defaultDemoOwnerWallet;
   const demoCreatorWallet = process.env.DEMO_CREATOR_WALLET || file.defaultDemoCreatorWallet;
 
+  if (!adminUsername) throw new Error("ADMIN_USERNAME is required.");
+  if (!adminPassword) throw new Error("ADMIN_PASSWORD is required.");
+  if (!adminSessionSecret) throw new Error("ADMIN_SESSION_SECRET is required.");
   assertHexAddress(demoOwnerWallet, "DEMO_OWNER_WALLET");
   assertHexAddress(demoCreatorWallet, "DEMO_CREATOR_WALLET");
 
@@ -54,6 +66,9 @@ export function getConfig(): AppConfig {
     publicBaseDomain,
     dataFile,
     statsFile,
+    adminUsername,
+    adminPassword,
+    adminSessionSecret,
     demoOwnerWallet,
     demoCreatorWallet
   };

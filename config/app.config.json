@@ -5,6 +5,9 @@
   "defaultPublicBaseDomain": "launch.jkswebtest.xyz",
   "defaultDataFile": "data/launchpad-db.json",
   "defaultStatsFile": "data/launchpad-stats.json",
+  "defaultAdminUsername": "admin",
+  "defaultAdminPassword": "admin-password",
+  "defaultAdminSessionSecret": "local-dev-admin-session-secret-change-me",
   "defaultDemoOwnerWallet": "0x1111111111111111111111111111111111111111",
   "defaultDemoCreatorWallet": "0x2222222222222222222222222222222222222222"
 }

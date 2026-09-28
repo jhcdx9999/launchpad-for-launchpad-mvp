@@ -7,6 +7,11 @@ const state = {
   popularLaunchpads: [],
   selectedSlug: null,
   message: "",
+  adminSession: { authenticated: false },
+  adminLoginDraft: {
+    username: "",
+    password: ""
+  },
   wallet: readStoredWallet(),
   createLaunchpadDraft: {
     name: "RWA Desk",
@@ -77,9 +82,11 @@ function clearStoredWallet() {
 }
 
 async function api(path, options = {}) {
+  const { headers = {}, ...rest } = options;
   const response = await fetch(path, {
-    headers: { "content-type": "application/json", ...(options.headers || {}) },
-    ...options
+    credentials: "same-origin",
+    headers: { "content-type": "application/json", ...headers },
+    ...rest
   });
   const body = await response.json();
   if (!response.ok) throw new Error(body.error || "Request failed");
@@ -117,6 +124,10 @@ function isTenantView() {
   return Boolean(tenantSlugFromHost());
 }
 
+function isAdminView() {
+  return window.location.pathname.replace(/\/+$/, "") === "/admin" && !tenantSlugFromHost();
+}
+
 function activeLaunchpad() {
   const selected = state.launchpads.find((launchpad) => launchpad.slug === state.selectedSlug);
   if (isTenantView()) return selected || null;
@@ -132,6 +143,14 @@ function formatCurrency(value) {
   if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(2)}M`;
   if (value >= 1_000) return `$${(value / 1_000).toFixed(1)}K`;
   return `$${value}`;
+}
+
+function formatDateTime(value) {
+  if (!value) return "Unknown";
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short"
+  }).format(new Date(value));
 }
 
 function requireWallet() {
@@ -177,6 +196,9 @@ async function load() {
   }
   const { popularLaunchpads } = await api("/api/launchpads/popular?limit=5");
   state.popularLaunchpads = popularLaunchpads;
+  if (isAdminView()) {
+    await loadAdminSession();
+  }
   const selected = activeLaunchpad();
   if (selected && tenantSlug) {
     const detail = await api(`/api/launchpads/slug/${selected.slug}`);
@@ -185,6 +207,15 @@ async function load() {
     state.tokens = [];
   }
   render();
+}
+
+async function loadAdminSession() {
+  try {
+    const { session } = await api("/api/admin/session");
+    state.adminSession = session;
+  } catch {
+    state.adminSession = { authenticated: false };
+  }
 }
 
 async function createLaunchpad(event) {
@@ -253,16 +284,63 @@ async function launchToken(event) {
     state.message = `B20 token ${token.symbol} was indexed under ${launchpad.name}.`;
     await load();
   } catch (error) {
+    state.adminLoginDraft.password = "";
     state.message = error.message;
     render();
   }
 }
 
-async function resetDemo() {
-  await api("/api/demo/reset", { method: "POST", body: "{}" });
-  state.selectedSlug = null;
-  state.message = "Launchpad data cleared. Create the first custom launchpad to start the market.";
-  await load();
+async function clearLaunchpadData() {
+  try {
+    const result = await api("/api/admin/clear", {
+      method: "POST",
+      body: "{}"
+    });
+    state.selectedSlug = null;
+    state.message = `Launchpad data cleared. ${result.launchpads.length} launchpads remain.`;
+    await load();
+  } catch (error) {
+    state.message = error.message;
+    render();
+  }
+}
+
+async function adminLogin(event) {
+  event.preventDefault();
+  const form = new FormData(event.currentTarget);
+  state.adminLoginDraft = {
+    username: String(form.get("username") || ""),
+    password: String(form.get("password") || "")
+  };
+
+  try {
+    const { session } = await api("/api/admin/login", {
+      method: "POST",
+      body: JSON.stringify(state.adminLoginDraft)
+    });
+    state.adminSession = session;
+    state.adminLoginDraft.password = "";
+    state.message = "Admin session active for 24 hours.";
+    render();
+  } catch (error) {
+    state.message = error.message;
+    render();
+  }
+}
+
+async function adminLogout() {
+  try {
+    const { session } = await api("/api/admin/logout", {
+      method: "POST",
+      body: "{}"
+    });
+    state.adminSession = session;
+    state.message = "Admin logged out.";
+    render();
+  } catch (error) {
+    state.message = error.message;
+    render();
+  }
 }
 
 function launchpadListHtml(selected) {
@@ -367,7 +445,7 @@ function launchpadCardsHtml(selected) {
               : `<div class="notice">No live tokens yet. First movers can own this launchpad's activity chart.</div>`
           }
           <div class="mono">Contract: ${launchpad.contractAddress}</div>
-          <button class="secondary-action select-launchpad" data-slug="${launchpad.slug}">View Details</button>
+          <button class="primary-action select-launchpad" data-slug="${launchpad.slug}">View Details</button>
         </article>
       `;
     })
@@ -375,6 +453,11 @@ function launchpadCardsHtml(selected) {
 }
 
 function render() {
+  if (isAdminView()) {
+    renderAdmin();
+    return;
+  }
+
   const tenantView = isTenantView();
   const selected = activeLaunchpad();
   const tokens = tenantView && selected ? state.tokens : [];
@@ -404,7 +487,6 @@ function render() {
           <div class="launchpad-list">${launchpadListHtml(selected)}</div>
         </section>
 
-        <button class="secondary-action" id="resetDemo">Clear Launchpad Data</button>
         <p class="muted">
           Local MVP uses a mocked B20 Factory event stream, but follows the real
           IB20Factory.createB20 integration boundary.
@@ -604,7 +686,89 @@ function render() {
   document.querySelector("#launchTokenForm")?.addEventListener("input", (event) => {
     state.launchTokenDraft[event.target.name] = event.target.value;
   });
-  document.querySelector("#resetDemo")?.addEventListener("click", resetDemo);
+}
+
+function renderAdmin() {
+  const totalTokens = state.popularLaunchpads.reduce((total, item) => total + item.stats.tokenCount, 0);
+  const isErrorMessage = state.message && /required|invalid|failed|error/i.test(state.message);
+  const messageClass = isErrorMessage ? "notice error" : "notice";
+  const loginDraft = state.adminLoginDraft;
+  const session = state.adminSession || { authenticated: false };
+
+  document.querySelector("#app").innerHTML = `
+    <main class="shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <a class="home-link" href="${rootLaunchpadUrl()}">Home</a>
+          <strong>Admin</strong>
+          <span>Launchpad Operations</span>
+        </div>
+
+        <div class="stats">
+          <div class="stat"><b>${state.launchpads.length}</b><span>Launchpads</span></div>
+          <div class="stat"><b>${totalTokens}</b><span>Total tokens</span></div>
+        </div>
+
+        <p class="muted">Admin access uses credentials configured in .env and stays active for 24 hours.</p>
+      </aside>
+
+      <section class="main">
+        <div class="topbar">
+          <div>
+            <h1>Admin Console</h1>
+            <div class="muted">Restricted operations for this MVP environment.</div>
+          </div>
+        </div>
+
+        ${state.message ? `<div class="${messageClass}">${state.message}</div>` : ""}
+
+        ${
+          session.authenticated
+            ? `
+        <section class="panel">
+          <h2>Access</h2>
+          <div class="pill-row">
+            <span class="pill">Authenticated</span>
+            <span class="pill">Expires ${formatDateTime(session.expiresAt)}</span>
+          </div>
+          <p class="muted">This admin session is stored in a 24-hour HttpOnly cookie.</p>
+          <button class="secondary-action" id="adminLogout">Log Out</button>
+        </section>
+
+        <section class="panel danger-panel">
+          <h2>Danger Zone</h2>
+          <p class="muted">This clears local MVP launchpads, tokens, events, and popular launchpad stats. It does not delete code or configuration.</p>
+          <button class="danger-action" id="clearLaunchpadData">Clear Launchpad Data</button>
+        </section>
+        `
+            : `
+        <section class="panel">
+          <h2>Admin Login</h2>
+          <form class="form" id="adminLoginForm">
+            <div class="field">
+              <label>Username</label>
+              <input name="username" value="${loginDraft.username}" autocomplete="username" required />
+            </div>
+            <div class="field">
+              <label>Password</label>
+              <input name="password" type="password" value="" autocomplete="current-password" required />
+            </div>
+            <button class="primary-action">Log In</button>
+          </form>
+          <p class="muted">Use ADMIN_USERNAME and ADMIN_PASSWORD from .env. No wallet connection is required for admin operations.</p>
+        </section>
+        `
+        }
+      </section>
+    </main>
+  `;
+
+  document.querySelector("#adminLoginForm")?.addEventListener("submit", adminLogin);
+  document.querySelector("#adminLoginForm")?.addEventListener("input", (event) => {
+    state.adminLoginDraft[event.target.name] = event.target.value;
+  });
+  document.querySelector("#adminLogout")?.addEventListener("click", adminLogout);
+  document.querySelector("#clearLaunchpadData")?.addEventListener("click", clearLaunchpadData);
 }
 
 load().catch((error) => {
