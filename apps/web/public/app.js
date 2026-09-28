@@ -543,11 +543,11 @@ function render() {
                 <input name="slug" value="${createDraft.slug}" placeholder="slug here" required />
               </div>
               <div class="field">
-                <label>Description</label>
+                <label>Description <span class="label-hint">optional</span></label>
                 <textarea name="description" placeholder="description here">${createDraft.description}</textarea>
               </div>
               <div class="field">
-                <label>Additional platform fee (bps)</label>
+                <label>Additional platform fee (bps) <span class="label-hint">default 50</span></label>
                 <input name="additionalFeeBps" type="number" value="${createDraft.additionalFeeBps}" placeholder="50" min="0" max="1000" />
               </div>
               <button class="primary-action">Create Launchpad</button>
@@ -599,16 +599,16 @@ function render() {
                 </div>
                 <div class="inline">
                   <div class="field">
-                    <label>Decimals</label>
+                    <label>Decimals <span class="label-hint">default 18</span></label>
                     <input name="decimals" type="number" value="${tokenDraft.decimals}" placeholder="18" min="6" max="18" />
                   </div>
                   <div class="field">
-                    <label>Initial supply</label>
-                    <input name="initialSupply" value="${tokenDraft.initialSupply}" placeholder="1000000" />
+                    <label>Initial supply <span class="label-hint">default 0</span></label>
+                    <input name="initialSupply" value="${tokenDraft.initialSupply}" placeholder="0" />
                   </div>
                 </div>
                 <div class="field">
-                  <label>Contract URI</label>
+                  <label>Contract URI <span class="label-hint">optional</span></label>
                   <input name="contractURI" value="${tokenDraft.contractURI}" placeholder="contract URI here" />
                 </div>
                 <button class="primary-action">Launch Token</button>
