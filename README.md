@@ -17,7 +17,7 @@ Connect wallet
 ## Structure
 
 ```text
-contracts/          Solidity factory, per-launchpad instance, registry/router, and local B20 mock
+contracts/          Solidity factory, per-launchpad instance, B20 interface, and local B20 mock
 apps/api/           TypeScript API, JSON store, and event indexer
 apps/web/           Static frontend served by the API
 packages/shared/    Shared domain types, validators, mock chain event helpers
@@ -128,11 +128,11 @@ Foundry is not bundled with this repository, so install `forge` before running t
 ## Submission Checklist
 
 - Runnable MVP: frontend + backend local app
-- Solidity contracts: factory, per-launchpad instance, registry alternative, B20 mock
+- Solidity contracts: factory, per-launchpad instance, B20 interface, B20 mock
 - Tests: TypeScript tests plus Foundry-style Solidity tests
-- Architecture document: `docs/ARCHITECTURE.md`
+- Architecture document: `docs/ARCHITECTURE.txt`
 - Clear mock/production boundary notes
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the technical design.
+See [docs/ARCHITECTURE.txt](docs/ARCHITECTURE.txt) for the technical design and product thinking.
 
 See [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) for a 3-5 minute walkthrough script.
